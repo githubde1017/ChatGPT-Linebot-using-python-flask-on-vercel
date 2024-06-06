@@ -1,22 +1,23 @@
 from api.prompt import Prompt
 import os
-from openai import OpenAI
-client = OpenAI()
+import openai  # 確保導入正確的 openai 庫
 
-client.api_key = os.getenv("OPENAI_API_KEY")
-
+# 設置 API 密鑰
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 class ChatGPT:
     def __init__(self):
         self.prompt = Prompt()
-        self.model = os.getenv("OPENAI_MODEL", default = "gpt-4-1106-preview")
-        self.temperature = float(os.getenv("OPENAI_TEMPERATURE", default = 0))
-        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", default = 500))
+        self.model = os.getenv("OPENAI_MODEL", default="gpt-4-1106-preview")
+        self.temperature = float(os.getenv("OPENAI_TEMPERATURE", default=0))
+        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", default=500))
 
     def get_response(self):
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=self.model,
             messages=self.prompt.generate_prompt(),
+            temperature=self.temperature,
+            max_tokens=self.max_tokens
         )
         return response.choices[0].message.content
 
