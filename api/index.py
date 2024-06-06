@@ -5,6 +5,7 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from api.chatgpt import ChatGPT
 import os
 
+# 初始化 LineBotApi 和 WebhookHandler
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 working_status = os.getenv("DEFAULT_TALKING", default="true").lower() == "true"
@@ -19,18 +20,17 @@ def home():
 
 @app.route("/webhook", methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
+    # 獲取 X-Line-Signature header 的值
     signature = request.headers['X-Line-Signature']
-    # get request body as text
+    # 獲取請求的 body
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
-    # handle webhook body
+    # 處理 Webhook 請求
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
     return 'OK'
-
 
 @line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -53,13 +53,18 @@ def handle_message(event):
         return
 
     if working_status:
-        chatgpt.add_msg(f"HUMAN:{event.message.text}?\n")
-        reply_msg = chatgpt.get_response().replace("AI:", "", 1)
-        chatgpt.add_msg(f"AI:{reply_msg}\n")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=reply_msg))
-
+        chatgpt.add_msg(f"HUMAN:{event.message.text}")
+        try:
+            reply_msg = chatgpt.get_response().replace("AI:", "", 1)
+            chatgpt.add_msg(f"AI:{reply_msg}")
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=reply_msg))
+        except Exception as e:
+            app.logger.error(f"Error getting response from OpenAI: {e}")
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="發生錯誤，請稍後再試。"))
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
